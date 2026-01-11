@@ -35,20 +35,32 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       setIsLoading(true);
       
       try {
-        // 1. Authenticate (Anonymous)
-        let { data: { session } } = await supabase.auth.getSession();
+        // 1. Authenticate (Anonymous) with Fallback
+        let session = null;
+        let currentUser: User | null = null;
         
-        if (!session) {
-          const { data: authData, error: authError } = await supabase.auth.signInAnonymously();
-          if (authError) throw authError;
-          session = authData.session;
+        try {
+          const { data: sessionData } = await supabase.auth.getSession();
+          session = sessionData.session;
+          
+          if (!session) {
+            const { data: authData, error: authError } = await supabase.auth.signInAnonymously();
+            if (authError) throw authError;
+            session = authData.session;
+          }
+          currentUser = session?.user || null;
+        } catch (authError) {
+          console.warn("Supabase Auth failed (likely disabled on server). Enabling Guest Mode.", authError);
+          // Fallback to Guest Mode
+          setUser({ id: 'guest', email: 'guest@example.com' } as User);
+          setOrgId('guest-org');
+          setProjectId('guest-project');
+          setSessionId('guest-session');
+          setIsLoading(false);
+          return;
         }
 
-        if (!session?.user) {
-           throw new Error("Failed to authenticate user.");
-        }
-        
-        const currentUser = session.user;
+        if (!currentUser) throw new Error("Failed to authenticate user.");
         setUser(currentUser);
 
         // 2. Identify or Create Organization
@@ -200,42 +212,56 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   };
 
   const saveStep = async (stepNumber: number, payload: any) => {
+    // Guest Mode: Skip DB save
+    if (sessionId === 'guest-session') {
+      console.log("Guest Mode: Saving step locally only", stepNumber);
+      if (stepNumber === 1) updateData(payload); 
+      setStep(stepNumber + 1);
+      return;
+    }
+
     if (!sessionId || !orgId) {
         console.warn("No session or org ID available for saving.");
         return;
     }
 
-    // 1. Upsert Answer
-    const { data: existing } = await supabase
-        .from('wizard_answers')
-        .select('id')
-        .eq('session_id', sessionId)
-        .eq('step_number', stepNumber)
-        .single();
+    try {
+      // 1. Upsert Answer
+      const { data: existing } = await supabase
+          .from('wizard_answers')
+          .select('id')
+          .eq('session_id', sessionId)
+          .eq('step_number', stepNumber)
+          .single();
 
-    if (existing) {
-        await supabase
-            .from('wizard_answers')
-            .update({ data: payload })
-            .eq('id', existing.id);
-    } else {
-        await supabase
-            .from('wizard_answers')
-            .insert({
-                session_id: sessionId,
-                step_number: stepNumber,
-                data: payload,
-                org_id: orgId
-            });
+      if (existing) {
+          await supabase
+              .from('wizard_answers')
+              .update({ data: payload })
+              .eq('id', existing.id);
+      } else {
+          await supabase
+              .from('wizard_answers')
+              .insert({
+                  session_id: sessionId,
+                  step_number: stepNumber,
+                  data: payload,
+                  org_id: orgId
+              });
+      }
+
+      // 2. Update Session Step
+      await supabase
+          .from('wizard_sessions')
+          .update({ current_step: stepNumber + 1 })
+          .eq('id', sessionId);
+          
+      setStep(stepNumber + 1);
+    } catch (error) {
+      console.error("Failed to save step:", error);
+      // Even if DB fails, allow user to proceed in UI
+      setStep(stepNumber + 1);
     }
-
-    // 2. Update Session Step
-    await supabase
-        .from('wizard_sessions')
-        .update({ current_step: stepNumber + 1 })
-        .eq('id', sessionId);
-        
-    setStep(stepNumber + 1);
   };
 
   return (
