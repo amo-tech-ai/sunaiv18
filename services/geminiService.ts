@@ -44,7 +44,7 @@ export const analyzeBusinessContext = async (context: BusinessContext): Promise<
     `;
 
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash-latest', // Using flash for speed/latency in UI
+      model: 'gemini-3-flash-preview', // Updated to Gemini 3 Flash for speed/latency
       contents: prompt,
     });
 
