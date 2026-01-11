@@ -142,6 +142,7 @@ export type Database = {
           project_id: string | null
           version: number
           is_active: boolean
+          summary: string
           metrics: Json
           created_at: string
         }
@@ -151,6 +152,7 @@ export type Database = {
           project_id?: string | null
           version?: number
           is_active?: boolean
+          summary: string
           metrics: Json
           created_at?: string
         }
@@ -160,6 +162,7 @@ export type Database = {
           project_id?: string | null
           version?: number
           is_active?: boolean
+          summary?: string
           metrics?: Json
           created_at?: string
         }

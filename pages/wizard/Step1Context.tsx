@@ -14,31 +14,35 @@ const Step1Context: React.FC = () => {
   // Trigger analysis when key fields change (Debounced)
   useEffect(() => {
     const timer = setTimeout(async () => {
-      // Trigger if we have a website OR (business name + decent description)
+      // 1. Minimum Data Verification
       const hasMinimumData = data.website.length > 5 || (data.businessName.length > 2 && data.description.length > 10);
       
-      // Only trigger if not currently analyzing. 
-      // We allow re-analysis even if content exists, to keep it "Live" as user types.
+      // Prevent multiple simultaneous analysis calls
       if (hasMinimumData && analysis.status !== 'analyzing') {
+        // 2. State Management: analyzing
         setAnalysis({ status: 'analyzing' });
         
         try {
           const result = await analyzeBusiness(data);
+          
+          // 2. State Management: idle/success
           setAnalysis({ status: 'idle', content: result });
           
-          // Auto-save the snapshot if we got a valid result
+          // 3. Snapshot Saving: Only if valid (not offline)
           if (result && !result.includes('Offline Analysis Mode')) {
-            await saveSnapshot(result);
+            // Handle snapshot save errors silently
+            saveSnapshot(result).catch(err => console.error("Snapshot background save failed", err));
           }
         } catch (e) {
           console.error("Analysis trigger failed", e);
+          // 2. State Management: error
           setAnalysis({ status: 'error' });
         }
       }
-    }, 2000); // 2s debounce to prevent API spam
+    }, 2000); // 2s debounce
 
     return () => clearTimeout(timer);
-  }, [data.website, data.businessName, data.description, data.industry]);
+  }, [data.website, data.businessName, data.description, data.industry, setAnalysis, saveSnapshot, analysis.status]);
 
   const toggleService = (service: string) => {
     const current = data.services;
@@ -50,26 +54,33 @@ const Step1Context: React.FC = () => {
   };
 
   const handleContinue = async () => {
+    // Basic validation
     if (!data.businessName || !data.fullName) return;
     
     setIsSaving(true);
     try {
-      // 1. Save Form Data
+      // 4. Continue Button Handler
+      
+      // Save Form Data
       await saveStep(1, data);
       
-      // 2. Save Analysis Snapshot (if present)
-      if (analysis.content) {
+      // Save Analysis Snapshot (if present and valid)
+      if (analysis.content && !analysis.content.includes('Offline Analysis Mode')) {
         await saveSnapshot(analysis.content);
       }
 
+      // Navigate
       navigate('/app/wizard/step-2');
     } catch (error) {
       console.error("Failed to save progress", error);
+      // Allow navigation even if save fails per prompt requirements
+      navigate('/app/wizard/step-2');
     } finally {
       setIsSaving(false);
     }
   };
 
+  // 5. Loading States: Session Init
   if (isSessionLoading) {
     return (
       <div className="flex flex-col items-center justify-center h-96 space-y-4">
@@ -113,16 +124,6 @@ const Step1Context: React.FC = () => {
           placeholder="https://" 
           value={data.website}
           onChange={(e) => updateData({ website: e.target.value })}
-          onBlur={() => {
-             // Immediate trigger on blur if we have a URL
-             if (data.website.length > 5 && analysis.status !== 'analyzing') {
-                setAnalysis({ status: 'analyzing' });
-                analyzeBusiness(data).then(res => {
-                   setAnalysis({ status: 'idle', content: res });
-                   saveSnapshot(res);
-                });
-             }
-          }}
         />
 
         <div className="space-y-1.5 w-full">

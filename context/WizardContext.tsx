@@ -232,10 +232,14 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
   // Helper to persist the AI analysis to context_snapshots
   const saveSnapshot = async (content: string) => {
-    if (sessionId === 'guest-session' || !orgId) return;
+    // 1. Guest Mode / Offline Check
+    if (sessionId === 'guest-session' || !orgId) {
+        console.warn("Guest/Offline Mode: Snapshot not saved to database.");
+        return;
+    }
 
     try {
-      // Find latest version
+      // 2. Version Management
       const { data: latest } = await supabase
         .from('context_snapshots')
         .select('version')
@@ -246,24 +250,37 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         
       const nextVersion = (latest?.version || 0) + 1;
 
-      // Deactivate old snapshots
+      // 3. Deactivate old snapshots
+      // Ensure only the latest snapshot is marked active for this org
       await supabase
         .from('context_snapshots')
         .update({ is_active: false })
         .eq('org_id', orgId);
 
-      // Insert new snapshot
-      await supabase.from('context_snapshots').insert({
+      // 4. Construct Fields
+      // Summary: Concise human-readable title
+      const summaryText = `Business Analysis: ${data.businessName || 'New Project'} - ${data.industry || 'General'}`;
+      
+      // Metrics: Structured JSONB data
+      const metricsData = { 
+        content: content,
+        timestamp: new Date().toISOString(), 
+        industry: data.industry || 'Unspecified'
+      };
+
+      // 5. Database Insert
+      const { error } = await supabase.from('context_snapshots').insert({
         org_id: orgId,
         project_id: projectId,
         version: nextVersion,
         is_active: true,
-        metrics: { 
-          content,
-          timestamp: new Date().toISOString(), 
-          industry: data.industry 
-        } // storing text in JSONB for flexible schema
+        summary: summaryText, // Required by schema
+        metrics: metricsData  // Required by schema
       });
+      
+      if (error) {
+        console.error("Supabase Error saving snapshot:", error);
+      }
       
     } catch (error) {
       console.error("Failed to save context snapshot:", error);

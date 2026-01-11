@@ -7,6 +7,8 @@ import { BusinessContext } from '../types';
  */
 export const analyzeBusiness = async (context: BusinessContext): Promise<string> => {
   try {
+    // Invoke the Edge Function with the expected payload structure
+    // We expect the response to contain an 'analysis' string field
     const { data, error } = await supabase.functions.invoke('analyze-business', {
       body: { 
         businessName: context.businessName,
@@ -18,15 +20,25 @@ export const analyzeBusiness = async (context: BusinessContext): Promise<string>
     });
 
     if (error) {
+      // Log the specific edge function error for debugging
       console.error('Edge Function Error:', error);
       throw error;
     }
 
-    return data?.analysis || "Analysis complete. (No content returned)";
+    // Extract the analysis text from the response data
+    const analysisText = data?.analysis;
+
+    if (!analysisText) {
+      console.warn("Edge Function returned no analysis content.");
+      return "Analysis complete. (No content returned)";
+    }
+
+    return analysisText;
   } catch (error) {
     console.error("Failed to analyze business via Edge Function:", error);
     
-    // Fallback for development/offline or if function isn't deployed yet
+    // User-friendly fallback for development/offline scenarios
+    // This ensures the UI doesn't break even if the backend is unreachable
     return `**Offline Analysis Mode**
     
     I've detected you are in the ${context.industry || 'General'} sector.
