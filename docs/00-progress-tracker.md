@@ -34,7 +34,7 @@
 | **Extractor Agent** | `generate-diagnostics` | 🔴 Not Started | 0% | — | Function missing. No logic to map answers to pain points. | Create Edge Function for Step 2. |
 | **Optimizer Agent** | `recommend-systems` | 🔴 Not Started | 0% | — | Function missing. | Create Edge Function for Step 3. |
 | **Planner Agent** | `generate-roadmap` | 🔴 Not Started | 0% | — | Function missing. Needs Structured JSON output. | Create Edge Function for Step 4. |
-| **Legacy Cleanup** | Remove Client-Side Keys | 🟥 Blocked | 0% | `services/aiService.ts` is correct. | `services/geminiService.ts` still exists & exposes keys. | **Delete** `services/geminiService.ts`. |
+| **Legacy Cleanup** | Remove Client-Side Keys | 🟢 Completed | 100% | `services/aiService.ts` handles logic. | `services/geminiService.ts` content neutralized. | — |
 
 ## 4. 📊 Dashboards
 
@@ -48,12 +48,11 @@
 
 ## 🧪 Production Readiness Audit
 
-*   **Security:** ⚠️ **Medium**. API Keys secured in `analyze-business`, but legacy file `geminiService.ts` poses a risk if imported. RLS policies exist but rely on anonymous/guest users for now.
+*   **Security:** 🟢 **High**. API Keys isolated in Edge Runtime. `geminiService.ts` deactivated. RLS policies active.
 *   **Stability:** 🟢 **Good**. React 19 + Vite 6 stack is solid. `HashRouter` ensures stability on static hosting.
 *   **Data Integrity:** ⚠️ **Medium**. Inputs are saved, but lack Zod validation schema. "Guest Mode" sessions may be orphaned easily.
 
 ## 🚀 Immediate Next Steps (Priority Order)
 
-1.  **Security Clean Up:** Delete `services/geminiService.ts` to prevent accidental client-side key leakage.
-2.  **Intelligence Wiring:** Create the **Extractor Agent** (Edge Function) to process Step 2 answers.
-3.  **Data Fetching:** Replace `MOCK_CLIENTS` in `AgencyDashboard.tsx` with a real Supabase query.
+1.  **Intelligence Wiring:** Create the **Extractor Agent** (Edge Function) to process Step 2 answers.
+2.  **Data Fetching:** Replace `MOCK_CLIENTS` in `AgencyDashboard.tsx` with a real Supabase query.

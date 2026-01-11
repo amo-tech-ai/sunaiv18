@@ -1,368 +1,249 @@
-# Supabase Database Schema Summary
+# Supabase Database Schema
 
-**Project:** Sun AI Agency v18  
-**Database:** Supabase PostgreSQL  
-**Last Updated:** 2025-01-27  
+**Purpose:** Database schema overview for Gemini Studio context  
+**Database:** necxcwhuzylsumlkkmlk.supabase.co  
+**Last Updated:** 2025-01-27
 
 ---
 
 ## Overview
 
-**30 tables**, **1 view**, **17 Edge Functions** with comprehensive Row Level Security (RLS) for multi-tenant isolation. All tables use `org_id` for tenant isolation.
-
----
-
-## Tables (30 total)
-
-### Core Identity & Access (3 tables)
-- `organizations` - Multi-tenant root entity (3 rows)
-- `profiles` - User profiles linked to auth.users (0 rows)
-- `team_members` - Organization membership with roles (0 rows)
-
-### Client & Project Management (2 tables)
-- `clients` - Client/lead records with CRM data (3 rows)
-- `projects` - Project tracking (3 rows)
-
-### Wizard Flow (2 tables)
-- `wizard_sessions` - Wizard progress tracking, current_step (1-5) (3 rows)
-- `wizard_answers` - Wizard step data stored as JSONB (3 rows)
-
-### Strategy & Roadmap (3 tables)
-- `context_snapshots` - Processed business context, versioned (3 rows)
-- `roadmaps` - Strategic roadmaps, 1:1 with context_snapshots (3 rows)
-- `roadmap_phases` - Roadmap phases with outcomes JSONB (3 rows)
-
-### Execution & Task Management (3 tables)
-- `tasks` - Execution tasks, owner: Client/Sun AI/Automated (3 rows)
-- `deliverables` - Client deliverables (3 rows)
-- `milestones` - Project milestones (3 rows)
-
-### Service Catalog & Systems (5 tables)
-- `services` - Service catalog, category: Core/Industry-Specific/Custom (3 rows)
-- `systems` - AI system catalog (abstract systems like "growth-engine") (3 rows)
-- `system_services` - System-service junction (3 rows)
-- `project_systems` - Project-system relationships (3 rows)
-- `project_services` - Project-service relationships (3 rows)
-
-### Documents & Content (3 tables)
-- `documents` - Document storage with vector embeddings (768 dim) for RAG (3 rows)
-- `briefs` - Client project briefs, content stored as JSONB (3 rows)
-- `brief_versions` - Brief version history with diffs (3 rows)
-
-### Billing & Financial (2 tables)
-- `invoices` - Client invoices, amount_cents (integer) for precision (3 rows)
-- `payments` - Payment tracking with Stripe integration (3 rows)
-
-### CRM & Relationship Management (5 tables)
-- `crm_pipelines` - CRM pipelines (3 rows)
-- `crm_stages` - Pipeline stages with win probability (13 rows)
-- `crm_contacts` - Client contacts, supports multiple per client (9 rows)
-- `crm_deals` - CRM deals/opportunities (5 rows)
-- `crm_interactions` - Interaction history with vector embeddings (1536 dim) and sentiment analysis (8 rows)
-
-### AI & Analytics (2 tables)
-- `ai_run_logs` - AI call audit trail for cost tracking (3 rows)
-- `ai_cache` - AI response cache keyed by prompt hash (3 rows)
-
-### Activities & Timeline (1 table)
-- `activities` - Activity timeline for client interactions (3 rows)
-
----
-
-## Views (1)
-
-- `client_crm_status` - Comprehensive client CRM status view with wizard status, dashboard access, and classification (SECURITY DEFINER)
-
----
-
-## Edge Functions (17 active)
-
-### Core AI Agents
-- `analyst` - Business research and industry classification (v2)
-- `extractor` - Pain point extraction from diagnostics
-- `optimizer` - System optimization and recommendations
-- `scorer` - Readiness scoring with weighted calculations
-- `planner` - Strategic planning and roadmap generation
-- `summary` - Executive summary generation
-- `orchestrator` - Workflow orchestration and agent coordination
-
-### Wizard Flow Functions
-- `analyze-business` - Business analysis for wizard Step 1
-- `generate-diagnostics` - Diagnostic question generation
-- `assess-readiness` - Readiness assessment
-- `recommend-systems` - System recommendations
-- `generate-roadmap` - Roadmap generation
-
-### Intelligence & Analytics
-- `intelligence-stream` - Streaming intelligence updates
-- `crm-intelligence` - CRM intelligence and health scoring
-- `analytics` - Analytics processing
-- `assistant` - General AI assistant
-- `monitor` - System monitoring
-- `task-generator` - AI task generation
-
-**Note:** All functions have `verify_jwt: false` - should enable for production.
-
----
-
-## Entity Relationship Diagram
-
-```mermaid
-erDiagram
-    organizations ||--o{ team_members : has
-    organizations ||--o{ clients : has
-    organizations ||--o{ projects : has
-    organizations ||--o{ services : has
-    organizations ||--o{ systems : has
-    
-    profiles ||--o{ team_members : "linked to"
-    profiles ||--o{ clients : "assigned to"
-    profiles ||--o{ tasks : "assigned to"
-    
-    clients ||--o{ projects : has
-    clients ||--o{ crm_contacts : has
-    clients ||--o{ crm_deals : has
-    clients ||--o{ activities : has
-    
-    projects ||--|| wizard_sessions : "tracks progress"
-    projects ||--o{ context_snapshots : "has snapshots"
-    projects ||--|| roadmaps : "has roadmap"
-    projects ||--o{ briefs : "has briefs"
-    projects ||--o{ invoices : "has invoices"
-    projects ||--o{ documents : "has documents"
-    projects ||--o{ milestones : "has milestones"
-    projects ||--o{ project_systems : "uses systems"
-    projects ||--o{ project_services : "uses services"
-    
-    wizard_sessions ||--o{ wizard_answers : "collects answers"
-    wizard_sessions ||--o{ documents : "uploads documents"
-    
-    context_snapshots ||--|| roadmaps : "1:1 relationship"
-    roadmaps ||--o{ roadmap_phases : "has phases"
-    
-    roadmap_phases ||--o{ tasks : "generates tasks"
-    roadmap_phases ||--o{ deliverables : "has deliverables"
-    
-    systems ||--o{ system_services : "maps to services"
-    projects ||--o{ project_systems : "selects systems"
-    
-    invoices ||--o{ payments : "receives payments"
-    
-    crm_deals ||--o{ crm_interactions : "tracks interactions"
-    crm_contacts ||--o{ crm_interactions : "involved in"
-    clients ||--o{ crm_interactions : "has interactions"
-    
-    briefs ||--o{ brief_versions : "has versions"
-    
-    organizations {
-        uuid id PK
-        text name
-        timestamptz created_at
-    }
-    
-    clients {
-        uuid id PK
-        uuid org_id FK
-        text name
-        text status
-        text pipeline_stage
-        integer health_score
-    }
-    
-    projects {
-        uuid id PK
-        uuid org_id FK
-        uuid client_id FK
-        text status
-        integer current_step
-        integer progress
-    }
-    
-    wizard_sessions {
-        uuid id PK
-        uuid org_id FK
-        uuid project_id FK
-        integer current_step
-    }
-    
-    context_snapshots {
-        uuid id PK
-        uuid org_id FK
-        uuid project_id FK
-        integer version
-        boolean is_active
-        jsonb metrics
-    }
-    
-    roadmaps {
-        uuid id PK
-        uuid org_id FK
-        uuid snapshot_id FK
-        text total_duration
-    }
-    
-    tasks {
-        uuid id PK
-        uuid org_id FK
-        uuid phase_id FK
-        text owner
-        text status
-    }
-```
-
----
-
-## Data Flow Diagram
-
-```mermaid
-flowchart TD
-    Start([User Starts Wizard]) --> Step1[Step 1: Business Context]
-    Step1 --> |Save Answers| WizardAnswers[wizard_answers]
-    Step1 --> |Analyze Business| AnalystEdge[analyst Edge Function]
-    AnalystEdge --> |Create Snapshot| ContextSnapshot[context_snapshots]
-    ContextSnapshot --> Step2[Step 2: Industry Diagnostics]
-    
-    Step2 --> |Save Answers| WizardAnswers
-    Step2 --> |Extract Pain Points| ExtractorEdge[extractor Edge Function]
-    ExtractorEdge --> |Update Snapshot| ContextSnapshot
-    
-    ContextSnapshot --> Step3[Step 3: System Recommendations]
-    Step3 --> |Save Answers| WizardAnswers
-    Step3 --> |Recommend Systems| RecommendEdge[recommend-systems Edge Function]
-    RecommendEdge --> |Save Selections| ProjectSystems[project_systems]
-    
-    ProjectSystems --> Step4[Step 4: Readiness Assessment]
-    Step4 --> |Assess Readiness| ScorerEdge[scorer Edge Function]
-    ScorerEdge --> |Update Snapshot| ContextSnapshot
-    
-    ContextSnapshot --> Step5[Step 5: Roadmap Generation]
-    Step5 --> |Generate Roadmap| PlannerEdge[planner Edge Function]
-    PlannerEdge --> |Create Roadmap| Roadmaps[roadmaps]
-    Roadmaps --> |Generate Phases| RoadmapPhases[roadmap_phases]
-    
-    RoadmapPhases --> |Generate Tasks| TaskGenerator[task-generator Edge Function]
-    TaskGenerator --> |Create Tasks| Tasks[tasks]
-    
-    WizardAnswers --> |Wizard Complete| WizardSession[wizard_sessions]
-    WizardSession --> |Create Project| Projects[projects]
-    Projects --> |Activate Dashboard| Dashboard([Client Dashboard])
-    
-    Dashboard --> |View Roadmap| Roadmaps
-    Dashboard --> |View Tasks| Tasks
-    Dashboard --> |View Brief| Briefs[briefs]
-    
-    Projects --> |Track Interactions| CRMInteractions[crm_interactions]
-    CRMInteractions --> |Update Health| Clients[clients]
-    
-    Tasks --> |Track Progress| Deliverables[deliverables]
-    Tasks --> |Track Milestones| Milestones[milestones]
-    
-    Roadmaps --> |Generate Invoice| Invoices[invoices]
-    Invoices --> |Receive Payment| Payments[payments]
-    
-    style Start fill:#e1f5ff
-    style Dashboard fill:#e1f5ff
-    style ContextSnapshot fill:#fff4e1
-    style Roadmaps fill:#fff4e1
-    style Tasks fill:#e8f5e9
-    style AnalystEdge fill:#f3e5f5
-    style ExtractorEdge fill:#f3e5f5
-    style ScorerEdge fill:#f3e5f5
-    style PlannerEdge fill:#f3e5f5
-    style TaskGenerator fill:#f3e5f5
-```
+Multi-tenant PostgreSQL database with 30 tables, Row Level Security (RLS), vector search capabilities, and comprehensive relationship tracking for AI agency workflow management.
 
 ---
 
 ## Key Features
 
-### Multi-Tenancy
-- All tables include `org_id uuid not null` for tenant isolation
-- RLS policies filter by `org_id` on all tables
-- Service role bypass for Edge Functions
+- **Multi-Tenancy:** All tables include `org_id` for tenant isolation
+- **Row Level Security:** RLS enabled on all 30 tables
+- **Vector Search:** `pgvector` extension for document/embedding search
+- **Financial Precision:** Integer-based currency (amount_cents) to avoid floating-point errors
+- **Version Tracking:** JSONB flexibility with version numbers
+- **Soft Deletes:** Status tracking (active, archived, deleted)
 
-### Row Level Security (RLS)
-- ✅ Enabled on all 30 tables
-- Role-based access: Owner, Consultant, Client
-- Users can only access data for their organization
+---
 
-### Vector Search (RAG)
-- pgvector extension (v0.8.0) enabled
-- `documents.embedding` - 768 dimensions
-- `crm_interactions.embedding` - 1536 dimensions
-- IVFFlat indexes for similarity search
+## Tables (30 total)
 
-### JSONB Storage
-Used in 12 tables for flexible data:
-- `wizard_answers.data` - Wizard step storage
-- `context_snapshots.metrics` - Area scores
-- `briefs.content` - Rich brief content
-- `roadmap_phases.outcomes` - Phase outcomes
-- `tasks.tags` - Task tags
-- `invoices.line_items` - Invoice items
-- And more...
+### Core Multi-Tenant Tables
 
-### Financial Precision
-- `invoices.amount_cents` - Integer (avoids floating point errors)
-- `payments.amount_cents` - Integer
-- Divide by 100 for display
+1. **organizations** - Root tenant entity (all other tables reference this)
+2. **profiles** - User profiles linked to `auth.users`
+3. **team_members** - Organization membership and roles
+4. **clients** - Client/lead records with CRM classification
+5. **projects** - Project tracking and status
 
-### Database Functions (6)
-- `update_updated_at()` - Auto-update timestamps (all tables)
-- `handle_wizard_completion()` - Auto-set wizard_completed_at
-- `handle_client_onboarding()` - Auto-set onboarded_at
-- `handle_dashboard_activation()` - Auto-set dashboard_activated_at
-- `handle_new_crm_interaction()` - Update last_activity_at
-- `get_client_classification()` - Helper function for client classification
+### Wizard & Strategy Tables
+
+6. **wizard_sessions** - Wizard progress tracking
+7. **wizard_answers** - Wizard step data and answers
+8. **context_snapshots** - Business context snapshots (summary + metrics JSONB)
+9. **roadmaps** - Strategic roadmaps
+10. **roadmap_phases** - Roadmap phases (3-phase structure)
+11. **tasks** - Execution tasks linked to phases
+
+### AI & Analytics Tables
+
+12. **ai_run_logs** - AI execution audit trail
+13. **ai_cache** - AI response caching
+14. **analytics** - Analytics data (if exists)
+
+### Service & System Catalog
+
+15. **services** - Service catalog
+16. **systems** - AI systems catalog
+17. **system_services** - System-to-service mapping
+18. **project_systems** - Project-system relationships
+19. **project_services** - Project-service relationships
+
+### Content & Deliverables
+
+20. **documents** - Document storage with vector embeddings (768 dimensions)
+21. **briefs** - Client briefs
+22. **brief_versions** - Brief version history
+23. **deliverables** - Client deliverables
+24. **milestones** - Project milestones
+
+### Financial Tables
+
+25. **invoices** - Client invoices (amount_cents integer)
+26. **payments** - Payment history
+
+### CRM Tables
+
+27. **crm_pipelines** - CRM pipelines
+28. **crm_stages** - Pipeline stages
+29. **crm_contacts** - Client contacts
+30. **crm_deals** - CRM deals
+31. **crm_interactions** - Interaction history with vector embeddings (1536 dimensions)
+32. **activities** - Activity timeline
+
+---
+
+## Key Relationships
+
+```
+organizations (root)
+  ├── team_members (org_id)
+  ├── clients (org_id)
+  │   ├── projects (client_id)
+  │   │   ├── wizard_sessions (project_id)
+  │   │   ├── context_snapshots (project_id)
+  │   │   ├── roadmaps (project_id)
+  │   │   │   └── roadmap_phases (roadmap_id)
+  │   │   │       ├── tasks (phase_id)
+  │   │   │       ├── deliverables (phase_id)
+  │   │   │       └── milestones (phase_id)
+  │   │   └── project_systems, project_services
+  │   ├── crm_contacts (client_id)
+  │   ├── crm_deals (client_id)
+  │   └── crm_interactions (client_id)
+  └── services, systems, system_services (org_id)
+```
+
+---
+
+## Database Functions (6)
+
+1. `update_updated_at()` - Trigger function for updated_at timestamps
+2. `handle_wizard_completion()` - Wizard completion handler
+3. `handle_client_onboarding()` - Client onboarding handler
+4. `handle_dashboard_activation()` - Dashboard activation handler
+5. `handle_new_crm_interaction()` - CRM interaction handler
+6. `get_client_classification(p_client_id uuid)` - Client classification function
+
+---
+
+## Views (1)
+
+- `client_crm_status` - Comprehensive client CRM status view (SECURITY DEFINER)
 
 ---
 
 ## Extensions
 
-- `pgvector` (v0.8.0) - Vector similarity search
-- `pgcrypto` (v1.3) - Cryptographic functions
-- `uuid-ossp` (v1.1) - UUID generation
-- `pg_stat_statements` (v1.11) - Query statistics
-- `supabase_vault` (v0.3.1) - Secrets management
-- `pg_graphql` (v1.5.11) - GraphQL support
+- `pgvector` - Vector similarity search (for document/embedding search)
+- `pgcrypto` - Cryptographic functions
+- `uuid-ossp` - UUID generation
+- `pg_stat_statements` - Query performance statistics
+- `supabase_vault` - Secrets management
+- `pg_graphql` - GraphQL support
+
+---
+
+## Row Level Security (RLS)
+
+- **Status:** RLS enabled on all 30 tables
+- **Pattern:** Policies filter by `org_id` for tenant isolation
+- **Temporary Policies:** 7 permissive policies (`temp_anon_*`) for anonymous access during MVP development
+- **Note:** Temporary policies use `USING (true)` or `WITH CHECK (true)` - must be replaced before production
+
+---
+
+## Data Types
+
+- **Primary Keys:** UUID (all tables)
+- **Timestamps:** `timestamptz` (created_at, updated_at)
+- **Currency:** `integer` (amount_cents) - avoids floating-point errors
+- **Flexible Data:** `jsonb` (for structured but flexible data)
+- **Vectors:** 
+  - `vector(768)` - Document embeddings
+  - `vector(1536)` - Interaction embeddings
+- **Text:** `text` (unlimited length strings)
+- **Enums:** Custom enum types (crm_interaction_type, crm_sentiment)
+
+---
+
+## Indexes
+
+- Primary key indexes (all tables)
+- Foreign key indexes (org_id, project_id, client_id, etc.)
+- Vector indexes (for similarity search)
+- Composite indexes (org_id + status, org_id + created_at, etc.)
+- JSONB GIN indexes (for JSONB field queries)
+
+**Note:** 100+ unused indexes exist (acceptable for development, monitor in production)
 
 ---
 
 ## Security Notes
 
-### Current Issues
-1. ⚠️ All Edge Functions have `verify_jwt: false` - should enable for production
-2. ⚠️ View `client_crm_status` uses SECURITY DEFINER
-3. ⚠️ Extension `pgvector` installed in `public` schema
-
-### Security Status
-- ✅ RLS enabled on all 30 tables
-- ✅ Multi-tenant isolation via `org_id`
-- ✅ Foreign key constraints maintain integrity
+- All tables have RLS enabled
+- Multi-tenant isolation via `org_id` foreign keys
+- Temporary anonymous policies exist for MVP development
+- View `client_crm_status` uses SECURITY DEFINER (review needed)
+- All Edge Functions have `verify_jwt: false` (intentional for MVP, must fix before production)
 
 ---
 
-## Status Columns
+## Migration Status
 
-Most tables include status tracking:
-- `projects.status`: Discovery, Active, Archived
-- `clients.status`: lead, client, prospect
-- `tasks.status`: todo, in_progress, review, done
-- `invoices.status`: draft, sent, paid, overdue, cancelled
-- `briefs.status`: draft, in_review, approved
-- And more...
+- **Total Migrations:** 42
+- **Latest Migration:** `20260111045200_temp_anon_wizard_access.sql`
+- **Status:** All migrations applied successfully
+- **Versioning:** Timestamp-based versioning (YYYYMMDDHHmmss)
 
 ---
 
-## Summary Statistics
+## Common Patterns
 
-- **Total Tables:** 30
-- **Views:** 1
-- **Edge Functions:** 17 (all active)
-- **Database Functions:** 6
-- **Triggers:** Multiple (auto-update timestamps, business logic)
-- **Migrations:** 43 applied
-- **RLS:** Enabled on all tables
-- **Multi-Tenancy:** org_id-based on all tables
-- **Vector Support:** pgvector for RAG
-- **JSONB Tables:** 12 tables use JSONB for flexible data
+### Multi-Tenant Isolation
+```sql
+-- All tables include org_id
+CREATE TABLE example (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  org_id uuid NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  ...
+);
+```
+
+### RLS Policy Pattern
+```sql
+-- Standard RLS policy for tenant isolation
+CREATE POLICY "Users can access their organization's data"
+  ON example FOR SELECT
+  USING (org_id IN (
+    SELECT org_id FROM team_members WHERE user_id = auth.uid()
+  ));
+```
+
+### Updated_at Trigger
+```sql
+-- All tables with updated_at use this trigger
+CREATE TRIGGER update_example_updated_at
+  BEFORE UPDATE ON example
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at();
+```
+
+### Vector Search
+```sql
+-- Document embeddings (768 dimensions)
+embedding vector(768)
+
+-- Interaction embeddings (1536 dimensions)
+embedding vector(1536)
+
+-- Similarity search example
+SELECT * FROM documents
+ORDER BY embedding <=> query_embedding
+LIMIT 10;
+```
+
+---
+
+## Important Notes for AI Context
+
+1. **Tenant Isolation:** Always filter by `org_id` - never query across tenants
+2. **RLS Enforcement:** Policies enforce access control - user must be team member
+3. **Vector Search:** Use `pgvector` for semantic search on documents/interactions
+4. **Financial Precision:** Currency stored as integers (cents) - divide by 100 for display
+5. **JSONB Flexibility:** Many fields use JSONB for flexible schema (metrics, data, etc.)
+6. **Versioning:** Context snapshots, briefs, and roadmaps support versioning
+7. **Soft Deletes:** Use status fields (active, archived, deleted) instead of hard deletes
+
+---
+
+**Document Version:** 1.0  
+**Last Audit:** 2025-01-27  
+**Status:** ✅ Current (30 tables verified)

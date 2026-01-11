@@ -1,18 +1,11 @@
 /**
- * DEPRECATED: This service has been replaced by `services/aiService.ts`.
+ * DEPRECATED AND REMOVED
  * 
- * New Implementation:
- * We have moved all AI analysis logic to Supabase Edge Functions to ensure:
- * 1. Security (API Keys are kept server-side)
- * 2. Centralized Logic (Consistent prompt engineering)
- * 3. CORS Compliance
+ * This service has been replaced by `services/aiService.ts`.
+ * All AI analysis logic now resides in Supabase Edge Functions.
  * 
- * Please import `analyzeBusiness` from `services/aiService.ts` instead.
+ * This file is kept as a placeholder to prevent import errors during migration
+ * but contains no logic or API keys.
  */
 
-import { BusinessContext } from "../types";
-
-export const analyzeBusinessContext = async (context: BusinessContext): Promise<string> => {
-  console.error("CRITICAL WARNING: Usage of deprecated geminiService. Use aiService.ts instead to prevent security risks.");
-  return "Error: This service is deprecated. Please refresh and use the updated application flow.";
-};
+export {};

@@ -1,7 +1,7 @@
 # Sun AI Agency — Technical Overview
 
-**Version:** 0.1.0 (Alpha)
-**Date:** October 2023
+**Version:** 0.3.0
+**Date:** January 2025
 **Type:** Single Page Application (SPA)
 
 This document outlines the technical architecture, technology stack, and application flows for the **Sun AI Agency** platform. The application is a "wizard-first" AI consultant that helps businesses structure their ideas before execution.
@@ -17,7 +17,7 @@ The application utilizes a modern, build-less ES Module architecture for develop
 | **Core Framework** | React | `^19.2.3` | via `esm.sh` |
 | **DOM Rendering** | ReactDOM | `^19.2.3` | via `esm.sh` |
 | **Routing** | React Router DOM | `^7.12.0` | `HashRouter` strategy |
-| **AI SDK** | Google GenAI SDK | `^1.35.0` | `@google/genai` |
+| **AI SDK** | Google GenAI SDK | `^1.35.0` | `@google/genai` (Server-side) |
 | **Styling** | Tailwind CSS | Latest (v3.4+) | CDN script injection |
 | **Icons** | Lucide React | `^0.562.0` | via `esm.sh` |
 | **Typography** | Google Fonts | N/A | Inter (Sans), Instrument Serif (Serif) |
@@ -55,7 +55,7 @@ The project follows a flat root structure typical of this specific development e
 │       └── Summary.tsx
 │
 └── services/
-    └── geminiService.ts        # Google Gemini API Integration layer
+    └── aiService.ts            # AI Service layer (Edge Functions Proxy)
 ```
 
 ---
@@ -104,13 +104,14 @@ graph TD
 ## 4. Workflows & Architecture
 
 ### Core Logic: The "Consultant" Pattern
-Unlike standard forms, this app runs an AI analysis in parallel with user input.
+Unlike standard forms, this app runs an AI analysis in parallel with user input using Supabase Edge Functions.
 
 1.  **Input:** User types description in `Step1Context`.
 2.  **Trigger:** `useEffect` debounces input (1.5s delay).
-3.  **Service:** `geminiService.ts` calls `ai.models.generateContent`.
+3.  **Service:** `aiService.ts` invokes `analyze-business` Edge Function.
 4.  **State:** `WizardContext` updates `analysis.status` and `analysis.content`.
-5.  **UI:** `WizardLayout` (Right Panel) reacts to state changes to show "Live Analysis".
+5.  **Persistence:** Results are saved to `context_snapshots` table.
+6.  **UI:** `WizardLayout` (Right Panel) reacts to state changes to show "Live Analysis".
 
 ### Data Flow Diagram
 
@@ -119,8 +120,8 @@ sequenceDiagram
     participant U as User
     participant S1 as Step 1 (UI)
     participant WC as WizardContext
-    participant GS as GeminiService
-    participant AI as Google Gemini API
+    participant AS as AIService
+    participant EF as Edge Function
     participant LP as Layout (Right Panel)
 
     U->>S1: Enters Business Name & Desc
@@ -128,15 +129,16 @@ sequenceDiagram
     
     note right of S1: Debounce 1500ms
     
-    S1->>GS: analyzeBusinessContext(data)
+    S1->>AS: analyzeBusiness(data)
     S1->>WC: setAnalysis({status: 'analyzing'})
     WC-->>LP: Shows Loading Pulse
     
-    GS->>AI: generateContent(prompt)
-    AI-->>GS: Returns Text Analysis
+    AS->>EF: invoke('analyze-business')
+    EF-->>AS: Returns Analysis Text
     
-    GS-->>S1: Returns Markdown String
+    AS-->>S1: Returns Markdown String
     S1->>WC: setAnalysis({status: 'idle', content: ...})
+    S1->>WC: saveSnapshot(...)
     WC-->>LP: Renders Markdown Analysis
 ```
 
@@ -166,12 +168,12 @@ The application enforces a strict layout to separate concerns:
 
 ## 6. Services & Integration
 
-### Google Gemini Integration
-*   **File:** `services/geminiService.ts`
-*   **Model:** `gemini-2.5-flash-latest` (Optimized for speed/latency in UI feedback).
-*   **Authentication:** `process.env.API_KEY` injected at runtime.
-*   **Fallback:** Includes a "Mock Analysis" mode if the API key is missing to ensure the UI remains functional during development/preview.
+### AI Integration (Edge Functions)
+*   **File:** `services/aiService.ts`
+*   **Architecture:** Proxy to Supabase Edge Functions.
+*   **Security:** API Keys kept server-side in Edge Runtime.
+*   **Fallback:** Includes "Offline Analysis Mode" for resilience if the backend is unreachable.
 
 ### State Management
 *   **React Context:** `WizardContext` holds the "Single Source of Truth" for the session.
-*   **Persistence:** Currently session-based (resets on refresh).
+*   **Persistence:** Synchronized with Supabase `wizard_sessions`, `wizard_answers`, and `context_snapshots`.

@@ -5,6 +5,28 @@ All notable changes to the **Sun AI Agency** platform will be documented in this
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2025-01-28
+
+### Added
+- **Edge Functions**:
+  - Implemented `analyze-business` function using `gemini-3-flash-preview`.
+  - Integrated `googleSearch` and `urlContext` tools for real-time grounding.
+  - Added robust error handling and `Authorization` header validation.
+- **Data Persistence**:
+  - Connected `Step1Context` to `context_snapshots` table.
+  - Implemented `saveSnapshot` in `WizardContext` with proper schema mapping (`summary` + `metrics`).
+- **Testing**:
+  - Added `tests/manual-verification.md` for end-to-end flow validation.
+
+### Changed
+- **AI Service**:
+  - Refactored `services/aiService.ts` to invoke Supabase Edge Functions.
+  - Removed client-side Gemini generation logic.
+  - Added "Offline Analysis Mode" fallback for resilience.
+- **Wizard Step 1**:
+  - Analysis now triggers server-side execution.
+  - Snapshots are only saved when analysis is successful (non-offline).
+
 ## [0.2.0] - 2025-01-27
 
 ### Added
