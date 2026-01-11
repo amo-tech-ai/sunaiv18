@@ -2,8 +2,6 @@ import { GoogleGenAI } from "@google/genai";
 import { BusinessContext } from "../types";
 
 // Initialize Gemini Client
-// Note: In a real app, strict error handling for missing keys is needed. 
-// Here we gracefully handle it to prevent crashes in preview.
 const apiKey = process.env.API_KEY || '';
 let ai: GoogleGenAI | null = null;
 
@@ -26,8 +24,20 @@ export const analyzeBusinessContext = async (context: BusinessContext): Promise<
   }
 
   try {
+    // Configure Tools
+    const tools: any[] = [{ googleSearch: {} }];
+    
+    // Add URL Context tool if a valid website is provided
+    // This enables the model to browse the specific URL for context
+    if (context.website && context.website.startsWith('http')) {
+       tools.push({ urlContext: {} });
+    }
+
     const prompt = `
       You are a senior business systems consultant for Sun AI Agency.
+      Research the company using Google Search.
+      ${context.website ? `Analyze the website content at ${context.website}.` : ''}
+      
       Analyze this business context briefly (max 100 words).
       
       Business Name: ${context.businessName}
@@ -38,14 +48,17 @@ export const analyzeBusinessContext = async (context: BusinessContext): Promise<
       Output format:
       **Diagnostics Ready**
       
-      [2-3 sentences of deep insight about their market position or operational challenges based on the description].
+      [2-3 sentences of deep insight about their market position or operational challenges based on the description and web findings].
       
       Select your primary constraints to unlock the system architecture phase.
     `;
 
     const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview', // Updated to Gemini 3 Flash for speed/latency
+      model: 'gemini-3-flash-preview', 
       contents: prompt,
+      config: {
+        tools: tools
+      }
     });
 
     return response.text || "Analysis complete. Ready for next steps.";
