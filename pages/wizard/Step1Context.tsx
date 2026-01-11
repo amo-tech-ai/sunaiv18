@@ -3,26 +3,42 @@ import { useNavigate } from 'react-router-dom';
 import { useWizard } from '../../context/WizardContext';
 import { Input, TextArea } from '../../components/ui/Input';
 import { Industry, SERVICES_LIST } from '../../types';
-import { Check, Upload, AlertCircle, ArrowRight, Activity, Loader2 } from 'lucide-react';
-import { analyzeBusinessContext } from '../../services/geminiService';
+import { Check, Upload, Activity, Loader2, ArrowRight } from 'lucide-react';
+import { analyzeBusiness } from '../../services/aiService';
 
 const Step1Context: React.FC = () => {
-  const { data, updateData, setAnalysis, saveStep, isLoading: isSessionLoading } = useWizard();
+  const { data, updateData, setAnalysis, saveStep, saveSnapshot, isLoading: isSessionLoading, analysis } = useWizard();
   const navigate = useNavigate();
   const [isSaving, setIsSaving] = useState(false);
 
-  // Debounce analysis trigger
+  // Trigger analysis when key fields change (Debounced)
   useEffect(() => {
-    const timer = setTimeout(() => {
-      if (data.businessName && data.description.length > 10) {
+    const timer = setTimeout(async () => {
+      // Trigger if we have a website OR (business name + decent description)
+      const hasMinimumData = data.website.length > 5 || (data.businessName.length > 2 && data.description.length > 10);
+      
+      // Only trigger if not currently analyzing. 
+      // We allow re-analysis even if content exists, to keep it "Live" as user types.
+      if (hasMinimumData && analysis.status !== 'analyzing') {
         setAnalysis({ status: 'analyzing' });
-        analyzeBusinessContext(data).then(result => {
+        
+        try {
+          const result = await analyzeBusiness(data);
           setAnalysis({ status: 'idle', content: result });
-        });
+          
+          // Auto-save the snapshot if we got a valid result
+          if (result && !result.includes('Offline Analysis Mode')) {
+            await saveSnapshot(result);
+          }
+        } catch (e) {
+          console.error("Analysis trigger failed", e);
+          setAnalysis({ status: 'error' });
+        }
       }
-    }, 1500);
+    }, 2000); // 2s debounce to prevent API spam
+
     return () => clearTimeout(timer);
-  }, [data.businessName, data.description, data.industry, data.services]);
+  }, [data.website, data.businessName, data.description, data.industry]);
 
   const toggleService = (service: string) => {
     const current = data.services;
@@ -38,8 +54,14 @@ const Step1Context: React.FC = () => {
     
     setIsSaving(true);
     try {
-      // Save data to Supabase
+      // 1. Save Form Data
       await saveStep(1, data);
+      
+      // 2. Save Analysis Snapshot (if present)
+      if (analysis.content) {
+        await saveSnapshot(analysis.content);
+      }
+
       navigate('/app/wizard/step-2');
     } catch (error) {
       console.error("Failed to save progress", error);
@@ -91,6 +113,16 @@ const Step1Context: React.FC = () => {
           placeholder="https://" 
           value={data.website}
           onChange={(e) => updateData({ website: e.target.value })}
+          onBlur={() => {
+             // Immediate trigger on blur if we have a URL
+             if (data.website.length > 5 && analysis.status !== 'analyzing') {
+                setAnalysis({ status: 'analyzing' });
+                analyzeBusiness(data).then(res => {
+                   setAnalysis({ status: 'idle', content: res });
+                   saveSnapshot(res);
+                });
+             }
+          }}
         />
 
         <div className="space-y-1.5 w-full">
@@ -120,14 +152,14 @@ const Step1Context: React.FC = () => {
              onChange={(e) => updateData({ description: e.target.value })}
            />
            {/* AI Detected Badge floating near description */}
-           {data.description.length > 20 && (
+           {analysis.content && (
              <div className="hidden md:flex absolute -right-4 top-0 translate-x-full w-48 bg-white border border-stone-100 p-3 shadow-sm rounded-sm text-xs text-stone-500 flex-col gap-1">
                <div className="flex items-center gap-1 text-accent-600 font-bold mb-1">
                  <Activity size={10} />
                  <span>AI Detected</span>
                </div>
-               <p>Based on signals:</p>
-               <p className="italic text-stone-400">Offline heuristic matching, Keyword analysis</p>
+               <p>Analysis Active</p>
+               <p className="italic text-stone-400">Context snapshot updated</p>
              </div>
            )}
         </div>
@@ -158,7 +190,7 @@ const Step1Context: React.FC = () => {
           </div>
         </div>
 
-        {/* Business Model / Maturity Indicators (Static for visual parity with screenshot) */}
+        {/* Business Model / Maturity Indicators */}
         <div className="grid grid-cols-2 gap-4">
           <div className="p-4 bg-stone-50 border border-stone-100 rounded-sm">
             <span className="block text-[10px] font-bold text-stone-400 uppercase mb-1">Business Model</span>

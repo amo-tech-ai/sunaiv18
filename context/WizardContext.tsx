@@ -173,6 +173,25 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
             if (answers && answers.data) {
               setData(prev => ({ ...prev, ...(answers.data as unknown as Partial<BusinessContext>) }));
             }
+            
+            // Restore latest snapshot if exists
+            const { data: snapshot } = await supabase
+              .from('context_snapshots')
+              .select('metrics, is_active')
+              .eq('org_id', currentOrgId)
+              .eq('is_active', true)
+              .order('version', { ascending: false })
+              .limit(1)
+              .single();
+              
+            if (snapshot && snapshot.metrics) {
+               // Assuming metrics contains the raw text content for now
+               const metrics = snapshot.metrics as any;
+               if (metrics.content) {
+                 setAnalysisState(prev => ({ ...prev, content: metrics.content, status: 'idle' }));
+               }
+            }
+
           } else {
             // Create New Wizard Session
             const { data: newSession, error: sessionError } = await supabase
@@ -209,6 +228,46 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
   const setAnalysis = (newAnalysis: Partial<AnalysisState>) => {
     setAnalysisState(prev => ({ ...prev, ...newAnalysis }));
+  };
+
+  // Helper to persist the AI analysis to context_snapshots
+  const saveSnapshot = async (content: string) => {
+    if (sessionId === 'guest-session' || !orgId) return;
+
+    try {
+      // Find latest version
+      const { data: latest } = await supabase
+        .from('context_snapshots')
+        .select('version')
+        .eq('org_id', orgId)
+        .order('version', { ascending: false })
+        .limit(1)
+        .single();
+        
+      const nextVersion = (latest?.version || 0) + 1;
+
+      // Deactivate old snapshots
+      await supabase
+        .from('context_snapshots')
+        .update({ is_active: false })
+        .eq('org_id', orgId);
+
+      // Insert new snapshot
+      await supabase.from('context_snapshots').insert({
+        org_id: orgId,
+        project_id: projectId,
+        version: nextVersion,
+        is_active: true,
+        metrics: { 
+          content,
+          timestamp: new Date().toISOString(), 
+          industry: data.industry 
+        } // storing text in JSONB for flexible schema
+      });
+      
+    } catch (error) {
+      console.error("Failed to save context snapshot:", error);
+    }
   };
 
   const saveStep = async (stepNumber: number, payload: any) => {
@@ -265,7 +324,7 @@ export const WizardProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   };
 
   return (
-    <WizardContext.Provider value={{ step, data, updateData, analysis, setAnalysis, sessionId, isLoading, saveStep }}>
+    <WizardContext.Provider value={{ step, data, updateData, analysis, setAnalysis, sessionId, isLoading, saveStep, saveSnapshot }}>
       {children}
     </WizardContext.Provider>
   );

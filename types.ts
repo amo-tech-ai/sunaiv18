@@ -1,3 +1,4 @@
+
 export interface BusinessContext {
   fullName: string;
   businessName: string;
@@ -23,6 +24,7 @@ export interface WizardState {
   sessionId: string | null;
   isLoading: boolean;
   saveStep: (step: number, payload: any) => Promise<void>;
+  saveSnapshot: (content: string) => Promise<void>;
 }
 
 export enum Industry {
