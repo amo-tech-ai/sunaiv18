@@ -5,10 +5,34 @@ All notable changes to the **Sun AI Agency** platform will be documented in this
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2025-01-27
+
+### Added
+- **Agency Dashboard**:
+  - New route `/agency` for multi-tenant client management.
+  - Implemented Client List view with health scores and status tracking.
+  - Added "Agency Intelligence" right panel for cross-client AI insights.
+- **Guest Mode**:
+  - Implemented fallback authentication in `WizardContext`.
+  - Application now functions in "Guest Mode" if Supabase Auth is unreachable or anonymous sign-ins are disabled.
+  - Enables UI development without active backend connection.
+- **Documentation**:
+  - Added `docs/prd.md` (Product Requirements Document v3.1.0).
+  - Added `docs/supabase.md` (Database Schema Reference).
+  - Added `docs/roadmap.md` (Implementation Roadmap).
+  - Added `docs/prompts/` directory for step-by-step AI development tracking.
+
+### Changed
+- **Architecture**:
+  - Removed `importmap` from `index.html` to comply with strict Vite + TypeScript build rules.
+  - Updated `lib/supabase.ts` to safely handle `import.meta.env` for environment variable injection.
+- **Dependencies**:
+  - Standardized on React 19 and Vite 6 patterns.
+
 ## [0.1.0] - 2023-10-27
 
 ### Added
-- **Core Architecture:**
+- **Core Architecture**:
   - Implemented Vite + React 19 + TypeScript stack.
   - Configured `importmap` for build-less dependency resolution via `esm.sh`.
   - Set up `HashRouter` for stable client-side routing.
