@@ -8,6 +8,7 @@ import Step2Diagnostics from './pages/wizard/Step2Diagnostics';
 import Step3Recommendations from './pages/wizard/Step3Recommendations';
 import Summary from './pages/wizard/Summary';
 import Dashboard from './pages/Dashboard';
+import AgencyDashboard from './pages/AgencyDashboard';
 
 const AppContent: React.FC = () => {
   return (
@@ -24,6 +25,8 @@ const AppContent: React.FC = () => {
         <Route path="dashboard" element={<Dashboard />} />
         <Route index element={<Navigate to="wizard/step-1" replace />} />
       </Route>
+      
+      <Route path="/agency" element={<AgencyDashboard />} />
       
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

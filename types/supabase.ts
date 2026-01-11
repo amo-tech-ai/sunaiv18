@@ -6,9 +6,81 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[]
 
-export interface Database {
+export type Database = {
   public: {
     Tables: {
+      organizations: {
+        Row: {
+          id: string
+          name: string
+          created_at: string
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          name: string
+          created_at?: string
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          name?: string
+          created_at?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      team_members: {
+        Row: {
+          id: string
+          org_id: string
+          user_id: string
+          role: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          org_id: string
+          user_id: string
+          role?: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          org_id?: string
+          user_id?: string
+          role?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
+      clients: {
+        Row: {
+          id: string
+          org_id: string
+          name: string
+          status: string
+          created_at: string
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          org_id: string
+          name: string
+          status: string
+          created_at?: string
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          org_id?: string
+          name?: string
+          status?: string
+          created_at?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       wizard_sessions: {
         Row: {
           id: string
@@ -34,6 +106,7 @@ export interface Database {
           created_at?: string
           updated_at?: string | null
         }
+        Relationships: []
       }
       wizard_answers: {
         Row: {
@@ -60,6 +133,7 @@ export interface Database {
           org_id?: string
           created_at?: string
         }
+        Relationships: []
       }
       context_snapshots: {
         Row: {
@@ -89,6 +163,7 @@ export interface Database {
           metrics?: Json
           created_at?: string
         }
+        Relationships: []
       }
       projects: {
         Row: {
@@ -121,7 +196,20 @@ export interface Database {
           created_at?: string
           updated_at?: string | null
         }
+        Relationships: []
       }
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      [_ in never]: never
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
     }
   }
 }

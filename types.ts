@@ -19,6 +19,10 @@ export interface WizardState {
   updateData: (data: Partial<BusinessContext>) => void;
   analysis: AnalysisState;
   setAnalysis: (analysis: Partial<AnalysisState>) => void;
+  // Persistence
+  sessionId: string | null;
+  isLoading: boolean;
+  saveStep: (step: number, payload: any) => Promise<void>;
 }
 
 export enum Industry {

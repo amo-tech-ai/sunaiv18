@@ -1,14 +1,15 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useWizard } from '../../context/WizardContext';
 import { Input, TextArea } from '../../components/ui/Input';
 import { Industry, SERVICES_LIST } from '../../types';
-import { Check, Upload, AlertCircle, ArrowRight, Activity } from 'lucide-react';
+import { Check, Upload, AlertCircle, ArrowRight, Activity, Loader2 } from 'lucide-react';
 import { analyzeBusinessContext } from '../../services/geminiService';
 
 const Step1Context: React.FC = () => {
-  const { data, updateData, setAnalysis } = useWizard();
+  const { data, updateData, setAnalysis, saveStep, isLoading: isSessionLoading } = useWizard();
   const navigate = useNavigate();
+  const [isSaving, setIsSaving] = useState(false);
 
   // Debounce analysis trigger
   useEffect(() => {
@@ -32,10 +33,29 @@ const Step1Context: React.FC = () => {
     }
   };
 
-  const handleContinue = () => {
-    if (!data.businessName || !data.fullName) return; 
-    navigate('/app/wizard/step-2');
+  const handleContinue = async () => {
+    if (!data.businessName || !data.fullName) return;
+    
+    setIsSaving(true);
+    try {
+      // Save data to Supabase
+      await saveStep(1, data);
+      navigate('/app/wizard/step-2');
+    } catch (error) {
+      console.error("Failed to save progress", error);
+    } finally {
+      setIsSaving(false);
+    }
   };
+
+  if (isSessionLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center h-96 space-y-4">
+        <Loader2 className="animate-spin text-stone-300" size={32} />
+        <p className="text-stone-400 text-sm animate-pulse">Restoring session...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -165,11 +185,20 @@ const Step1Context: React.FC = () => {
       <div className="pt-8 flex justify-end">
         <button 
           onClick={handleContinue}
-          disabled={!data.businessName || !data.fullName}
+          disabled={!data.businessName || !data.fullName || isSaving}
           className="bg-stone-900 text-white px-8 py-3 rounded-sm text-sm font-medium flex items-center gap-2 hover:bg-stone-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
-          Continue
-          <ArrowRight size={16} />
+          {isSaving ? (
+            <>
+              <Loader2 className="animate-spin" size={16} />
+              Saving...
+            </>
+          ) : (
+            <>
+              Continue
+              <ArrowRight size={16} />
+            </>
+          )}
         </button>
       </div>
     </div>
