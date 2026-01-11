@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Application now functions in "Guest Mode" if Supabase Auth is unreachable or anonymous sign-ins are disabled.
   - Enables UI development without active backend connection.
 - **Documentation**:
+  - Added `docs/00-progress-tracker.md` for real-time implementation status tracking.
   - Added `docs/prd.md` (Product Requirements Document v3.1.0).
   - Added `docs/supabase.md` (Database Schema Reference).
   - Added `docs/roadmap.md` (Implementation Roadmap).
