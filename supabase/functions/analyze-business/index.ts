@@ -1,6 +1,12 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { GoogleGenAI } from 'https://esm.sh/@google/genai@0.1.3'
 
+declare const Deno: {
+  env: {
+    get(key: string): string | undefined;
+  };
+};
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -34,9 +40,7 @@ serve(async (req) => {
     }
 
     // 4. Gemini API Configuration
-    // Fixed: Reverted to Deno.env.get because process.env is not available in Supabase Edge Runtime (Deno).
-    // Using (Deno as any) to bypass TypeScript error "Property 'env' does not exist on type 'typeof Deno'" in some environments.
-    const apiKey = (Deno as any).env.get('API_KEY');
+    const apiKey = Deno.env.get('API_KEY');
     if (!apiKey) {
         console.error("API_KEY not set in Edge Function environment");
         throw new Error('Server configuration error');
@@ -44,17 +48,15 @@ serve(async (req) => {
 
     const ai = new GoogleGenAI({ apiKey });
 
-    // 5. Conditional URL Context Tool
-    const tools: any[] = [{ googleSearch: {} }];
-    if (website && typeof website === 'string' && website.startsWith('http')) {
-        tools.push({ urlContext: {} });
-    }
+    // 5. Tool Configuration
+    // Guidelines: "Only tools: googleSearch is permitted. Do not use it with other tools."
+    const tools = [{ googleSearch: {} }];
 
     // 6. Prompt Construction
     const prompt = `
       You are a senior business systems consultant for Sun AI Agency. We specialize in implementing AI Agents, Unified Data Layers, and Automated Workflows to help service businesses scale.
       
-      Research the company using Google Search and the provided Website URL (if available) to analyze their specific offerings and market positioning.
+      Research the company using Google Search${website ? ` and their website (${website})` : ''} to analyze their specific offerings and market positioning.
       
       Context:
       Business Name: ${businessName}
