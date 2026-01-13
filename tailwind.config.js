@@ -24,7 +24,7 @@ export default {
           900: '#1c1917',
         },
         accent: {
-          500: '#f59e0b', // Amber/Gold like
+          500: '#f59e0b',
           600: '#d97706',
         }
       }

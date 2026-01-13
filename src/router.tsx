@@ -10,7 +10,6 @@ import Dashboard from './pages/Dashboard';
 import AgencyDashboard from './pages/AgencyDashboard';
 import { WizardProvider } from './context/WizardContext';
 
-// Layout wrapper that provides context
 const WizardWrapper: React.FC = () => {
   return (
     <WizardProvider>
@@ -26,7 +25,7 @@ export const router = createHashRouter([
   },
   {
     path: '/app',
-    element: <WizardWrapper />, // Renders WizardLayout which MUST contain <Outlet />
+    element: <WizardWrapper />,
     children: [
       {
         path: 'wizard/step-1',

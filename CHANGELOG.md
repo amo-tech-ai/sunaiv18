@@ -5,6 +5,26 @@ All notable changes to the **Sun AI Agency** platform will be documented in this
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.3] - 2025-01-28
+
+### Fixed
+- **Module Resolution & Import Errors**:
+  - Moved root-level `data/` and `services/` directories into `src/` to resolve broken relative imports (e.g., `../../data/industryPacks`) in wizard components.
+  - Fixed `aiService.ts` paths to correctly reference Supabase client and types.
+- **Tailwind Configuration**:
+  - Created `postcss.config.js` and `tailwind.config.js` to replace inline HTML configuration.
+  - Configured content sources to correctly scan `./src/**/*.{ts,tsx}`.
+
+### Added
+- **Build Configuration**:
+  - Added `vite.config.ts` with standard React plugin and alias resolution (`@` -> `./src`).
+  - Added `tsconfig.json` and `tsconfig.node.json` for proper TypeScript compilation boundaries.
+
+### Refactored
+- **Directory Structure**:
+  - Enforced "Src Sovereignty": All application source code now resides strictly within `src/`.
+  - Removed "Split-Brain" logic where some business logic lived in root while UI lived in `src`.
+
 ## [0.3.2] - 2025-01-28
 
 ### Fixed
