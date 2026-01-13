@@ -5,6 +5,18 @@ All notable changes to the **Sun AI Agency** platform will be documented in this
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.4] - 2025-01-28
+
+### Fixed
+- **Critical Startup Crash (Blank Screen)**:
+  - Definitively removed `<script type="importmap">` from `index.html`. This block was causing a "Split Brain" issue where the browser attempted to load React from `esm.sh` while Vite bundled it locally.
+  - Removed Tailwind CSS CDN to enforce usage of the local PostCSS pipeline.
+
+### Refactored
+- **Routing Architecture**:
+  - Rewrote `src/App.tsx` to strictly implement `<RouterProvider router={router} />`.
+  - Removed all vestiges of `<HashRouter>` or `<Routes>` from the application root to prevent routing context conflicts.
+
 ## [0.3.3] - 2025-01-28
 
 ### Fixed
